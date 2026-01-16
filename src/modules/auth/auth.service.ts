@@ -24,7 +24,8 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const saltRounds = Number(this.configService.get('BCRYPT_SALT_ROUNDS'));
+    const hashedPassword = await bcrypt.hash(dto.password, saltRounds);
 
     const userDto: CreateUserDto = {
       ...dto,
@@ -97,7 +98,8 @@ export class AuthService {
   }
 
   async updateRefreshToken(userId: string, refreshToken: string) {
-    const hash = await bcrypt.hash(refreshToken, 10);
+    const saltRounds = Number(this.configService.get('BCRYPT_SALT_ROUNDS'));
+    const hash = await bcrypt.hash(refreshToken, saltRounds);
     await this.usersService.update(userId, {
       refreshToken: hash,
     });
