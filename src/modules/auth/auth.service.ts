@@ -7,12 +7,14 @@ import { LoginDto } from './dto/login.dto';
 import {instanceToInstance} from "class-transformer";
 import {UserResponseDto} from "../users/dto/user-response.dto";
 import {CreateUserDto} from "../users/dto/create-user.dto";
+import {ConfigService} from "@nestjs/config";
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -30,13 +32,16 @@ export class AuthService {
     };
 
     try {
-      const savedUser = await this.usersService.create(userDto) as UserResponseDto;
+      const user = await this.usersService.create(userDto) as UserResponseDto;
 
-      const { accessToken } = this.signToken(savedUser.id, savedUser.email);
+      const { accessToken, refreshToken } = await this.signTokens(user.id, user.email);
+
+      await this.updateRefreshToken(user.id, refreshToken);
 
       return {
-        user: savedUser,
+        user,
         accessToken,
+        refreshToken,
       };
 
     } catch (error: any) {
@@ -64,20 +69,78 @@ export class AuthService {
 
     const userResponse = instanceToInstance(user) as UserResponseDto;
 
-    const { accessToken } = this.signToken(user.id, user.email);
+    const { accessToken, refreshToken } = await this.signTokens(user.id, user.email);
+
+    await this.updateRefreshToken(user.id, refreshToken);
 
     return {
       user: userResponse,
       accessToken,
+      refreshToken,
     };
   }
 
-  private signToken(userId: string, email: string) {
-    return {
-      accessToken: this.jwtService.sign({
-        sub: userId,
-        email,
-      }),
-    };
+  private async signTokens(userId: string, email: string) {
+    const payload = { sub: userId, email };
+
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get('JWT_SECRET'),
+      expiresIn: this.configService.get('JWT_ACCESS_EXPIRES_IN'),
+    });
+
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get('JWT_REFRESH_SECRET'),
+      expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN'),
+    });
+
+    return { accessToken, refreshToken };
+  }
+
+  async updateRefreshToken(userId: string, refreshToken: string) {
+    const hash = await bcrypt.hash(refreshToken, 10);
+    await this.usersService.update(userId, {
+      refreshToken: hash,
+    });
+  }
+
+  async refreshTokens(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+
+      const user = await this.usersService.findById(payload.sub);
+
+      if (!user || !user.refreshToken) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const isValid = await bcrypt.compare(refreshToken, user.refreshToken);
+
+      if (!isValid) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const { accessToken, refreshToken: newRefreshToken } = await this.signTokens(
+        user.id,
+        user.email,
+      );
+
+      await this.updateRefreshToken(user.id, newRefreshToken);
+
+      return {
+        accessToken,
+        refreshToken: newRefreshToken,
+      };
+
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  async logout(userId: string) {
+    await this.usersService.update(userId, {
+      refreshToken: null,
+    });
   }
 }
