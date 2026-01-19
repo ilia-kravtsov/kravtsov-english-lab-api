@@ -22,7 +22,7 @@ export class User {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   @Exclude()
   refreshToken: string | null;
 }

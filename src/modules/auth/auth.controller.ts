@@ -1,4 +1,4 @@
-import {Controller, Post, Body, UseGuards, UnauthorizedException, Req, Res} from '@nestjs/common';
+import {Controller, Post, Body, UseGuards, UnauthorizedException, Req, Res, Get} from '@nestjs/common';
 import express from 'express';
 import {AuthService} from './auth.service';
 import {RegisterDto} from './dto/register.dto';
@@ -47,5 +47,11 @@ export class AuthController {
     await this.authService.logout(userId);
     clearRefreshTokenCookie(res);
     return { message: 'Logged out' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  me(@CurrentUser() user: { userId: string; email: string }) {
+    return user;
   }
 }
