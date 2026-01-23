@@ -6,6 +6,9 @@ import {LoginDto} from './dto/login.dto';
 import {JwtAuthGuard} from "../../common/guards/jwt-auth.guard";
 import {CurrentUser} from "../../common/decorators/current-user.decorator";
 import {clearRefreshTokenCookie, setRefreshTokenCookie} from "../../common/utils/cookies.util";
+import {ResetPasswordDto} from "./dto/reset-password.dto";
+import {ForgotPasswordDto} from "./dto/forgot-password.dto";
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -53,5 +56,18 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() user: { userId: string; email: string }) {
     return user;
+  }
+
+  @Throttle({ default: { ttl: 300, limit: 3 } })
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    const token = await this.authService.forgotPassword(dto.email);
+    return { message: 'If this email exists, a reset link has been sent', token };
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto.token, dto.password);
+    return { message: 'Password has been reset successfully' };
   }
 }

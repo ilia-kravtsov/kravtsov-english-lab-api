@@ -142,4 +142,58 @@ export class AuthService {
       refreshToken: null,
     });
   }
+
+  async forgotPassword(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) return;
+
+    const payload = { sub: user.id, email: user.email };
+
+    const resetToken = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get('JWT_RESET_SECRET'),
+      expiresIn: this.configService.get('JWT_RESET_EXPIRES_IN'),
+    });
+
+    const saltRounds = Number(this.configService.get('BCRYPT_SALT_ROUNDS'));
+    const hash = await bcrypt.hash(resetToken, saltRounds);
+
+    await this.usersService.update(user.id, {
+      resetPasswordToken: hash,
+    });
+
+    return resetToken;
+  }
+
+  async resetPassword(token: string, password: string) {
+    let payload: { sub: string; email: string };
+
+    try {
+      payload = await this.jwtService.verifyAsync(token, {
+        secret: this.configService.get('JWT_RESET_SECRET'),
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    const user = await this.usersService.findById(payload.sub);
+
+    if (!user || !user.resetPasswordToken) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    const isValid = await bcrypt.compare(token, user.resetPasswordToken);
+
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    const saltRounds = Number(this.configService.get('BCRYPT_SALT_ROUNDS'));
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    await this.usersService.update(user.id, {
+      password: hashedPassword,
+      resetPasswordToken: null,
+      refreshToken: null,
+    });
+  }
 }

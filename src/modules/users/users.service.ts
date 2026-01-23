@@ -30,4 +30,10 @@ export class UsersService {
   async update(userId: string, attrs: Partial<User>): Promise<void> {
     await this.usersRepository.update(userId, attrs);
   }
+
+  async findByResetToken(token: string): Promise<User | null> {
+    return await this.usersRepository.findOne({
+      where: { resetPasswordToken: token },
+    });
+  }
 }

@@ -25,4 +25,12 @@ export class User {
   @Column({ type: 'varchar', nullable: true })
   @Exclude()
   refreshToken: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  @Exclude()
+  resetPasswordToken: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  @Exclude()
+  resetPasswordExpires: Date | null;
 }
