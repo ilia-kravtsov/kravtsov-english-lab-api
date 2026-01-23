@@ -88,7 +88,7 @@ export class AuthService {
 
     const refreshToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get('JWT_REFRESH_SECRET'),
-      expiresIn: this.configService.get('JWT_REFRESH_EXPIRES_IN'),
+      expiresIn: Number(this.configService.get('JWT_REFRESH_EXPIRES_IN')),
     });
 
     return { accessToken, refreshToken };
@@ -151,7 +151,7 @@ export class AuthService {
 
     const resetToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get('JWT_RESET_SECRET'),
-      expiresIn: this.configService.get('JWT_RESET_EXPIRES_IN'),
+      expiresIn: Number(this.configService.get('JWT_RESET_EXPIRES_IN')) || 900,
     });
 
     const saltRounds = Number(this.configService.get('BCRYPT_SALT_ROUNDS'));
