@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {Injectable, BadRequestException, UnauthorizedException, NotFoundException} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
@@ -151,7 +151,7 @@ export class AuthService {
 
     const resetToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get('JWT_RESET_SECRET'),
-      expiresIn: Number(this.configService.get('JWT_RESET_EXPIRES_IN')) || 900,
+      expiresIn: Number(this.configService.get('JWT_RESET_EXPIRES_IN')),
     });
 
     const saltRounds = Number(this.configService.get('BCRYPT_SALT_ROUNDS'));
@@ -195,5 +195,15 @@ export class AuthService {
       resetPasswordToken: null,
       refreshToken: null,
     });
+  }
+
+  async getMe(userId: string): Promise<UserResponseDto> {
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
   }
 }

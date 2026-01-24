@@ -54,8 +54,8 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  me(@CurrentUser() user: { userId: string; email: string }) {
-    return user;
+  async me(@CurrentUser('userId') userId: string) {
+    return await this.authService.getMe(userId);
   }
 
   @Throttle({ default: { ttl: 300, limit: 3 } })
