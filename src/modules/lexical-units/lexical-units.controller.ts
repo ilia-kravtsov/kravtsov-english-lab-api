@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Post,
+  Get,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -35,6 +37,7 @@ export class LexicalUnitsController {
       limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
     }),
   )
+
   async create(
     @Body() dto: CreateLexicalUnitDto,
     @UploadedFile() file?: Express.Multer.File,
@@ -56,6 +59,30 @@ export class LexicalUnitsController {
       examples: created.examples ?? null,
       comment: created.comment ?? null,
       audioUrl: created.audioPath ? `/uploads/${created.audioPath}` : null,
+    };
+  }
+
+  @Get('search')
+  async search(@Query('value') value?: string) {
+    if (!value || !value.trim()) return null;
+
+    const found = await this.service.findByValue(value);
+
+    if (!found) return null;
+
+    return {
+      id: found.id,
+      type: found.type,
+      value: found.value,
+      translation: found.translation ?? null,
+      transcription: found.transcription ?? null,
+      meaning: found.meaning ?? null,
+      antonyms: found.antonyms ?? null,
+      synonyms: found.synonyms ?? null,
+      partsOfSpeech: found.partsOfSpeech ?? null,
+      examples: found.examples ?? null,
+      comment: found.comment ?? null,
+      audioUrl: found.audioPath ? `/uploads/${found.audioPath}` : null,
     };
   }
 }
