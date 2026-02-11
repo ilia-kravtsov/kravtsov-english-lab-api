@@ -6,6 +6,7 @@ import databaseConfig from './config/database.config';
 import {UsersModule} from "./modules/users/users.module";
 import {AuthModule} from "./modules/auth/auth.module";
 import { ThrottlerModule } from '@nestjs/throttler';
+import {LexicalUnitsModule} from "./modules/lexical-units/lexical-units.module";
 
 @Module({
   imports: [
@@ -34,7 +35,8 @@ import { ThrottlerModule } from '@nestjs/throttler';
       }),
     }),
     UsersModule,
-    AuthModule
+    AuthModule,
+    LexicalUnitsModule
   ],
   controllers: [],
   providers: [],

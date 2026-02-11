@@ -1,0 +1,61 @@
+import {
+  Body,
+  Controller,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { CreateLexicalUnitDto } from './dto/create-lexical-unit.dto';
+import { LexicalUnitsService } from './lexical-units.service';
+import { randomUUID } from 'crypto';
+
+function safeExt(originalName: string) {
+  const e = extname(originalName || '').toLowerCase();
+  return e && e.length <= 10 ? e : '.webm';
+}
+
+@Controller('lexical-units')
+export class LexicalUnitsController {
+  constructor(private readonly service: LexicalUnitsService) {}
+
+  @Post()
+  @UseInterceptors(
+    FileInterceptor('audio', {
+      storage: diskStorage({
+        destination: './uploads/lexical-audio',
+        filename: (_req, file, cb) => {
+          const ext = safeExt(file.originalname);
+          const name = `${randomUUID()}${ext}`;
+          cb(null, name);
+        },
+      }),
+      limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
+    }),
+  )
+  async create(
+    @Body() dto: CreateLexicalUnitDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const audioPath = file ? `lexical-audio/${file.filename}` : null;
+
+    const created = await this.service.create(dto, audioPath);
+
+    return {
+      id: created.id,
+      type: created.type,
+      value: created.value,
+      translation: created.translation ?? null,
+      transcription: created.transcription ?? null,
+      meaning: created.meaning ?? null,
+      antonyms: created.antonyms ?? null,
+      synonyms: created.synonyms ?? null,
+      partsOfSpeech: created.partsOfSpeech ?? null,
+      examples: created.examples ?? null,
+      comment: created.comment ?? null,
+      audioUrl: created.audioPath ? `/uploads/${created.audioPath}` : null,
+    };
+  }
+}
