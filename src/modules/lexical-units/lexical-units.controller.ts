@@ -4,6 +4,10 @@ import {
   Post,
   Get,
   Query,
+  Put,
+  Param,
+  Delete,
+  HttpCode,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -34,7 +38,7 @@ export class LexicalUnitsController {
           cb(null, name);
         },
       }),
-      limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
+      limits: { fileSize: 15 * 1024 * 1024 },
     }),
   )
 
@@ -84,5 +88,50 @@ export class LexicalUnitsController {
       comment: found.comment ?? null,
       audioUrl: found.audioPath ? `/uploads/${found.audioPath}` : null,
     };
+  }
+
+  @Put(':id')
+  @UseInterceptors(
+    FileInterceptor('audio', {
+      storage: diskStorage({
+        destination: './uploads/lexical-audio',
+        filename: (_req, file, cb) => {
+          const ext = safeExt(file.originalname);
+          const name = `${randomUUID()}${ext}`;
+          cb(null, name);
+        },
+      }),
+      limits: { fileSize: 15 * 1024 * 1024 },
+    }),
+  )
+  async update(
+    @Param('id') id: string,
+    @Body() dto: CreateLexicalUnitDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const audioPath = file ? `lexical-audio/${file.filename}` : null;
+
+    const updated = await this.service.update(id, dto, audioPath);
+
+    return {
+      id: updated.id,
+      type: updated.type,
+      value: updated.value,
+      translation: updated.translation ?? null,
+      transcription: updated.transcription ?? null,
+      meaning: updated.meaning ?? null,
+      antonyms: updated.antonyms ?? null,
+      synonyms: updated.synonyms ?? null,
+      partsOfSpeech: updated.partsOfSpeech ?? null,
+      examples: updated.examples ?? null,
+      comment: updated.comment ?? null,
+      audioUrl: updated.audioPath ? `/uploads/${updated.audioPath}` : null,
+    };
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  async remove(@Param('id') id: string) {
+    await this.service.remove(id);
   }
 }

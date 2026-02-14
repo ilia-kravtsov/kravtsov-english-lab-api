@@ -37,28 +37,28 @@ export class LexicalUnitEntity {
   value: string;
 
   @Column({ type: 'text', nullable: true })
-  translation?: string;
+  translation?: string | null;
 
   @Column({ type: 'text', nullable: true })
-  transcription?: string;
+  transcription?: string | null;
 
   @Column({ type: 'text', nullable: true })
-  meaning?: string;
+  meaning?: string | null;
 
   @Column({ type: 'text', nullable: true })
-  antonyms?: string;
+  antonyms?: string | null;
 
   @Column({ type: 'text', nullable: true })
-  synonyms?: string;
+  synonyms?: string | null;
 
   @Column({ type: 'enum', enum: PartsOfSpeech, nullable: true })
-  partsOfSpeech?: PartsOfSpeech;
+  partsOfSpeech?: PartsOfSpeech | null;
 
   @Column({ type: 'text', nullable: true })
-  examples?: string;
+  examples?: string | null;
 
   @Column({ type: 'text', nullable: true })
-  comment?: string;
+  comment?: string | null;
 
   @Column({ type: 'text', nullable: true })
   audioPath: string | null;
