@@ -1,6 +1,15 @@
-import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
-import { LexicalUnitType, PartsOfSpeech } from '../entities/lexical-unit.entity';
-import {Transform} from "class-transformer";
+import {
+  IsArray,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MinLength,
+  registerDecorator,
+  ValidationArguments,
+  ValidationOptions
+} from 'class-validator';
+import {LexicalUnitType, PartsOfSpeech} from '../entities/lexical-unit.entity';
+import {Transform, Type} from "class-transformer";
 
 export class CreateLexicalUnitDto {
   @IsEnum(LexicalUnitType)
@@ -30,10 +39,24 @@ export class CreateLexicalUnitDto {
   @IsString()
   synonyms?: string;
 
-  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
-  @IsEnum(PartsOfSpeech)
-  partsOfSpeech?: PartsOfSpeech;
+  @Transform(({ value }) => {
+    if (value == null || value === '') return undefined;
+
+    const toList = (v: unknown): string[] => {
+      if (Array.isArray(v)) return v.flatMap(toList);
+      if (typeof v === 'string') {
+        return v.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      return [];
+    };
+
+    const list = toList(value);
+    return list.length ? list : undefined;
+  })
+  @IsArray()
+  @IsEnum(PartsOfSpeech, { each: true })
+  partsOfSpeech?: PartsOfSpeech[];
 
   @IsOptional()
   @IsString()

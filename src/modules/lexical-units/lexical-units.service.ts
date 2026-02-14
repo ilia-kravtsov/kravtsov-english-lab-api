@@ -52,6 +52,7 @@ export class LexicalUnitsService {
     const entity = this.repo.create({
       ...dto,
       value: normalizeValue(dto.value),
+      partsOfSpeech: dto.partsOfSpeech ?? null,
       audioPath: audioPath ?? null,
     });
 

@@ -51,8 +51,8 @@ export class LexicalUnitEntity {
   @Column({ type: 'text', nullable: true })
   synonyms?: string | null;
 
-  @Column({ type: 'enum', enum: PartsOfSpeech, nullable: true })
-  partsOfSpeech?: PartsOfSpeech | null;
+  @Column({ type: 'text', array: true, nullable: true })
+  partsOfSpeech: PartsOfSpeech[] | null;
 
   @Column({ type: 'text', nullable: true })
   examples?: string | null;
