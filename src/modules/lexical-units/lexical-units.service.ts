@@ -5,17 +5,32 @@ import { LexicalUnitEntity } from './entities/lexical-unit.entity';
 import { CreateLexicalUnitDto } from './dto/create-lexical-unit.dto';
 import { ConflictException } from '@nestjs/common';
 import { promises as fs } from 'fs';
-import {join} from "path";
+import {join, normalize} from "path";
 
 function normalizeValue(value: string) {
   return value.trim().replace(/\s+/g, ' ');
 }
 
-async function safeUnlink(filePathAbs: string) {
+function normalizeStoredAudioPath(p: string) {
+  let x = p.replace(/\\/g, '/').trim();
+
+  if (x.startsWith('/')) x = x.slice(1);
+  if (x.startsWith('uploads/')) x = x.slice('uploads/'.length);
+  if (x.startsWith('/uploads/')) x = x.slice('/uploads/'.length);
+
+  x = normalize(x).replace(/\\/g, '/');
+  if (x.startsWith('..')) throw new Error('Invalid audio path');
+
+  return x;
+}
+
+const UPLOADS_DIR = join(process.cwd(), 'uploads');
+
+async function safeUnlinkAbs(absPath: string) {
   try {
-    await fs.unlink(filePathAbs);
-  } catch (error) {
-    console.log(error);
+    await fs.unlink(absPath);
+  } catch (e) {
+    console.log(e);
   }
 }
 
@@ -110,8 +125,9 @@ export class LexicalUnitsService {
       entity.audioPath = newAudioPath;
 
       if (old) {
-        const abs = join(process.cwd(), 'uploads', old);
-        await safeUnlink(abs);
+        const rel = normalizeStoredAudioPath(old);
+        const abs = join(UPLOADS_DIR, rel);
+        await safeUnlinkAbs(abs);
       }
     }
 
@@ -123,8 +139,9 @@ export class LexicalUnitsService {
     if (!entity) throw new NotFoundException('Lexical unit not found');
 
     if (entity.audioPath) {
-      const abs = join(process.cwd(), 'uploads', entity.audioPath);
-      await safeUnlink(abs);
+      const rel = normalizeStoredAudioPath(entity.audioPath);
+      const abs = join(UPLOADS_DIR, rel);
+      await safeUnlinkAbs(abs);
     }
 
     await this.repo.remove(entity);

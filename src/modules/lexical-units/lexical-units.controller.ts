@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import {extname, join} from 'path';
 import { CreateLexicalUnitDto } from './dto/create-lexical-unit.dto';
 import { LexicalUnitsService } from './lexical-units.service';
 import { randomUUID } from 'crypto';
@@ -25,6 +25,8 @@ function safeExt(originalName: string) {
   return e && e.length <= 10 ? e : '.webm';
 }
 
+const UPLOADS_AUDIO_DIR = join(process.cwd(), 'uploads', 'lexical-audio');
+
 @Controller('lexical-units')
 @UseGuards(JwtAuthGuard)
 export class LexicalUnitsController {
@@ -34,7 +36,7 @@ export class LexicalUnitsController {
   @UseInterceptors(
     FileInterceptor('audio', {
       storage: diskStorage({
-        destination: './uploads/lexical-audio',
+        destination: UPLOADS_AUDIO_DIR,
         filename: (_req, file, cb) => {
           const ext = safeExt(file.originalname);
           const name = `${randomUUID()}${ext}`;
