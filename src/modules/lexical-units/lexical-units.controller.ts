@@ -9,7 +9,7 @@ import {
   Delete,
   HttpCode,
   UploadedFile,
-  UseInterceptors,
+  UseInterceptors, UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -17,6 +17,8 @@ import { extname } from 'path';
 import { CreateLexicalUnitDto } from './dto/create-lexical-unit.dto';
 import { LexicalUnitsService } from './lexical-units.service';
 import { randomUUID } from 'crypto';
+import {JwtAuthGuard} from "../../common/guards/jwt-auth.guard";
+import {CurrentUser} from "../../common/decorators/current-user.decorator";
 
 function safeExt(originalName: string) {
   const e = extname(originalName || '').toLowerCase();
@@ -24,6 +26,7 @@ function safeExt(originalName: string) {
 }
 
 @Controller('lexical-units')
+@UseGuards(JwtAuthGuard)
 export class LexicalUnitsController {
   constructor(private readonly service: LexicalUnitsService) {}
 
@@ -43,12 +46,13 @@ export class LexicalUnitsController {
   )
 
   async create(
+    @CurrentUser('userId') userId: string,
     @Body() dto: CreateLexicalUnitDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     const audioPath = file ? `lexical-audio/${file.filename}` : null;
 
-    const created = await this.service.create(dto, audioPath);
+    const created = await this.service.create(userId, dto, audioPath);
 
     return {
       id: created.id,
@@ -67,10 +71,13 @@ export class LexicalUnitsController {
   }
 
   @Get('search')
-  async search(@Query('value') value?: string) {
+  async search(
+    @CurrentUser('userId') userId: string,
+    @Query('value') value?: string,
+    ) {
     if (!value || !value.trim()) return null;
 
-    const found = await this.service.findByValue(value);
+    const found = await this.service.findByValue(userId, value);
 
     if (!found) return null;
 
@@ -105,13 +112,14 @@ export class LexicalUnitsController {
     }),
   )
   async update(
+    @CurrentUser('userId') userId: string,
     @Param('id') id: string,
     @Body() dto: CreateLexicalUnitDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     const audioPath = file ? `lexical-audio/${file.filename}` : null;
 
-    const updated = await this.service.update(id, dto, audioPath);
+    const updated = await this.service.update(userId, id, dto, audioPath);
 
     return {
       id: updated.id,
@@ -131,7 +139,10 @@ export class LexicalUnitsController {
 
   @Delete(':id')
   @HttpCode(204)
-  async remove(@Param('id') id: string) {
-    await this.service.remove(id);
+  async remove(
+    @CurrentUser('userId') userId: string,
+    @Param('id') id: string,
+  ) {
+    await this.service.remove(userId, id);
   }
 }

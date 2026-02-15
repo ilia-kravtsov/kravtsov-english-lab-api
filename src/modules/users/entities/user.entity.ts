@@ -1,5 +1,6 @@
 import { Exclude } from 'class-transformer';
-import {Column, CreateDateColumn, Entity, PrimaryGeneratedColumn} from "typeorm";
+import {Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn} from "typeorm";
+import {LexicalUnitEntity} from "../../lexical-units/entities/lexical-unit.entity";
 
 @Entity('users')
 export class User {
@@ -33,4 +34,7 @@ export class User {
   @Column({ type: 'timestamptz', nullable: true })
   @Exclude()
   resetPasswordExpires: Date | null;
+
+  @OneToMany(() => LexicalUnitEntity, (lu) => lu.user)
+  lexicalUnits: LexicalUnitEntity[];
 }

@@ -26,24 +26,26 @@ export class LexicalUnitsService {
     private readonly repo: Repository<LexicalUnitEntity>,
   ) {}
 
-  async existsByValue(value: string): Promise<boolean> {
+  async existsByValue(userId: string, value: string): Promise<boolean> {
     const v = normalizeValue(value);
 
     const count = await this.repo
       .createQueryBuilder('lu')
-      .where('LOWER(lu.value) = LOWER(:v)', { v })
+      .where('lu.userId = :userId', { userId })
+      .andWhere('LOWER(lu.value) = LOWER(:v)', { v })
       .getCount();
 
     return count > 0;
   }
 
   async create(
+    userId: string,
     dto: CreateLexicalUnitDto,
     audioPath?: string | null,
   ): Promise<LexicalUnitEntity> {
     const normalized = normalizeValue(dto.value);
 
-    const exists = await this.existsByValue(normalized);
+    const exists = await this.existsByValue(userId, normalized);
 
     if (exists) {
       throw new ConflictException('Lexical unit already exists');
@@ -51,33 +53,49 @@ export class LexicalUnitsService {
 
     const entity = this.repo.create({
       ...dto,
-      value: normalizeValue(dto.value),
+      value: normalized,
       partsOfSpeech: dto.partsOfSpeech ?? null,
       audioPath: audioPath ?? null,
+      userId,
     });
 
     return this.repo.save(entity);
   }
 
-  async findByValue(value: string): Promise<LexicalUnitEntity | null> {
+  async findByValue(userId: string, value: string): Promise<LexicalUnitEntity | null> {
     const v = normalizeValue(value);
 
     return this.repo
       .createQueryBuilder('lu')
-      .where('LOWER(lu.value) = LOWER(:v)', { v })
+      .where('lu.userId = :userId', { userId })
+      .andWhere('LOWER(lu.value) = LOWER(:v)', { v })
       .getOne();
   }
 
   async update(
+    userId: string,
     id: string,
     dto: CreateLexicalUnitDto,
     newAudioPath?: string | null,
   ): Promise<LexicalUnitEntity> {
-    const entity = await this.repo.findOne({ where: { id } });
+    const entity = await this.repo.findOne({ where: { id, userId } });
     if (!entity) throw new NotFoundException('Lexical unit not found');
 
+    const nextValue = normalizeValue(dto.value);
+
+    const collision = await this.repo
+      .createQueryBuilder('lu')
+      .where('lu.userId = :userId', { userId })
+      .andWhere('LOWER(lu.value) = LOWER(:v)', { v: nextValue })
+      .andWhere('lu.id <> :id', { id })
+      .getCount();
+
+    if (collision > 0) {
+      throw new ConflictException('Lexical unit already exists');
+    }
+
     entity.type = dto.type;
-    entity.value = normalizeValue(dto.value);
+    entity.value = nextValue;
     entity.translation = dto.translation ?? null;
     entity.transcription = dto.transcription ?? null;
     entity.meaning = dto.meaning ?? null;
@@ -100,8 +118,8 @@ export class LexicalUnitsService {
     return this.repo.save(entity);
   }
 
-  async remove(id: string): Promise<void> {
-    const entity = await this.repo.findOne({ where: { id } });
+  async remove(userId: string, id: string): Promise<void> {
+    const entity = await this.repo.findOne({ where: { id, userId } });
     if (!entity) throw new NotFoundException('Lexical unit not found');
 
     if (entity.audioPath) {

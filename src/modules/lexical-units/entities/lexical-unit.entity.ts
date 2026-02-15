@@ -1,10 +1,11 @@
 import {
   Column,
   CreateDateColumn,
-  Entity,
+  Entity, Index, JoinColumn, ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import {User} from "../../users/entities/user.entity";
 
 export enum LexicalUnitType {
   WORD = 'word',
@@ -26,6 +27,7 @@ export enum PartsOfSpeech {
 }
 
 @Entity('lexical_units')
+@Index(['userId'])
 export class LexicalUnitEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -62,6 +64,13 @@ export class LexicalUnitEntity {
 
   @Column({ type: 'text', nullable: true })
   audioPath: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  userId: string | null;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
   @CreateDateColumn()
   createdAt: Date;
