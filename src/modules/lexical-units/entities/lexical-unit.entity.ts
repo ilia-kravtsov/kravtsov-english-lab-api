@@ -65,6 +65,9 @@ export class LexicalUnitEntity {
   @Column({ type: 'text', nullable: true })
   audioPath: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  imageUrl: string | null;
+
   @Column({ type: 'uuid', nullable: true })
   userId: string | null;
 

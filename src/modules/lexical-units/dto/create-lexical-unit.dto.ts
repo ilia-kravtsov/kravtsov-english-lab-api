@@ -1,15 +1,6 @@
-import {
-  IsArray,
-  IsEnum,
-  IsOptional,
-  IsString,
-  MinLength,
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions
-} from 'class-validator';
+import {IsArray, IsEnum, IsOptional, IsString, IsUrl, MinLength} from 'class-validator';
 import {LexicalUnitType, PartsOfSpeech} from '../entities/lexical-unit.entity';
-import {Transform, Type} from "class-transformer";
+import {Transform} from "class-transformer";
 
 export class CreateLexicalUnitDto {
   @IsEnum(LexicalUnitType)
@@ -45,13 +36,16 @@ export class CreateLexicalUnitDto {
 
     const toList = (v: unknown): string[] => {
       if (Array.isArray(v)) return v.flatMap(toList);
+
       if (typeof v === 'string') {
         return v.split(',').map(s => s.trim()).filter(Boolean);
       }
+
       return [];
     };
 
     const list = toList(value);
+
     return list.length ? list : undefined;
   })
   @IsArray()
@@ -65,4 +59,8 @@ export class CreateLexicalUnitDto {
   @IsOptional()
   @IsString()
   comment?: string;
+
+  @IsOptional()
+  @IsUrl({ require_protocol: true }, { message: 'imageUrl must be a valid URL with http/https' })
+  imageUrl?: string;
 }
