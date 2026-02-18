@@ -7,6 +7,8 @@ import {UsersModule} from "./modules/users/users.module";
 import {AuthModule} from "./modules/auth/auth.module";
 import { ThrottlerModule } from '@nestjs/throttler';
 import {LexicalUnitsModule} from "./modules/lexical-units/lexical-units.module";
+import {CardSetsModule} from "./modules/card-sets/card-sets.module";
+import {CardsModule} from "./modules/cards/cards.module";
 
 @Module({
   imports: [
@@ -36,7 +38,9 @@ import {LexicalUnitsModule} from "./modules/lexical-units/lexical-units.module";
     }),
     UsersModule,
     AuthModule,
-    LexicalUnitsModule
+    LexicalUnitsModule,
+    CardSetsModule,
+    CardsModule,
   ],
   controllers: [],
   providers: [],

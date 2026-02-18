@@ -35,6 +35,9 @@ export class User {
   @Exclude()
   resetPasswordExpires: Date | null;
 
+  @Column({ type: 'boolean', default: false })
+  cardsInitialized: boolean;
+
   @OneToMany(() => LexicalUnitEntity, (lu) => lu.user)
   lexicalUnits: LexicalUnitEntity[];
 }
