@@ -14,9 +14,12 @@ type PresetCardSet = {
 };
 
 const PRESET_CARD_SETS: PresetCardSet[] = [
-  { title: 'General', description: null, sortOrder: 0 },
-  { title: 'Verbs', description: null, sortOrder: 10 },
-  { title: 'Phrases', description: null, sortOrder: 20 },
+  { title: 'A1', description: "Standard cards set", sortOrder: 0 },
+  { title: 'A2', description: "Standard cards set", sortOrder: 10 },
+  { title: 'B1', description: "Standard cards set", sortOrder: 20 },
+  { title: 'B2', description: "Standard cards set", sortOrder: 30 },
+  { title: 'C1', description: "Standard cards set", sortOrder: 40 },
+  { title: 'C2', description: "Standard cards set", sortOrder: 50 },
 ];
 
 function normalizeText(value: string) {
