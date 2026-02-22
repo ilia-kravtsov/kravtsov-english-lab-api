@@ -187,6 +187,18 @@ export class CardSetsService {
     await this.repo.remove(entity);
   }
 
+  async getById(userId: string, id: string): Promise<CardSetEntity> {
+    const set = await this.repo.findOne({
+      where: { id, userId },
+    });
+
+    if (!set) {
+      throw new NotFoundException('Card set not found');
+    }
+
+    return set;
+  }
+
   toDto(entity: CardSetEntity) {
     return {
       id: entity.id,

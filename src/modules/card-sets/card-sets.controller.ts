@@ -53,4 +53,13 @@ export class CardSetsController {
   async remove(@CurrentUser('userId') userId: string, @Param('id') id: string) {
     await this.service.remove(userId, id);
   }
+
+  @Get(':id')
+  async getOne(
+    @CurrentUser('userId') userId: string,
+    @Param('id') id: string,
+  ) {
+    const set = await this.service.getById(userId, id);
+    return this.service.toDto(set);
+  }
 }
