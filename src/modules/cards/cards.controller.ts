@@ -6,7 +6,7 @@ import {
   HttpCode,
   Param,
   Post,
-  Put,
+  Put, Query,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -24,9 +24,17 @@ export class CardsController {
   async list(
     @CurrentUser('userId') userId: string,
     @Param('cardSetId') cardSetId: string,
+    @Query('include') include?: string,
   ) {
-    const cards = await this.service.list(userId, cardSetId);
-    return cards.map((c) => this.service.toDto(c));
+    const withLexicalUnit = include === 'lexicalUnit';
+
+    const cards = withLexicalUnit
+      ? await this.service.listWithLexicalUnit(userId, cardSetId)
+      : await this.service.list(userId, cardSetId);
+
+    return cards.map((c) =>
+      withLexicalUnit ? this.service.toDtoWithLexicalUnit(c) : this.service.toDto(c),
+    );
   }
 
   @Get(':cardId')

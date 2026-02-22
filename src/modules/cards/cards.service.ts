@@ -47,6 +47,16 @@ export class CardsService {
     });
   }
 
+  async listWithLexicalUnit(userId: string, cardSetId: string): Promise<CardEntity[]> {
+    await this.getOwnedCardSetOrThrow(userId, cardSetId);
+
+    return this.cardsRepo.find({
+      where: { userId, cardSetId },
+      relations: { lexicalUnit: true },
+      order: { sortOrder: 'ASC', createdAt: 'ASC' },
+    });
+  }
+
   async getById(userId: string, cardSetId: string, cardId: string): Promise<CardEntity> {
     await this.getOwnedCardSetOrThrow(userId, cardSetId);
 
@@ -100,6 +110,24 @@ export class CardsService {
     await this.cardsRepo.remove(card);
   }
 
+  private lexicalUnitToDto(entity: LexicalUnitEntity) {
+    return {
+      id: entity.id,
+      type: entity.type,
+      value: entity.value,
+      translation: entity.translation ?? null,
+      transcription: entity.transcription ?? null,
+      meaning: entity.meaning ?? null,
+      antonyms: entity.antonyms ?? null,
+      synonyms: entity.synonyms ?? null,
+      partsOfSpeech: entity.partsOfSpeech ?? null,
+      examples: entity.examples ?? null,
+      comment: entity.comment ?? null,
+      audioUrl: entity.audioPath ? `/uploads/${entity.audioPath}` : null,
+      imageUrl: entity.imageUrl ?? null,
+    };
+  }
+
   toDto(entity: CardEntity) {
     return {
       id: entity.id,
@@ -109,6 +137,19 @@ export class CardsService {
       sortOrder: entity.sortOrder,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
+    };
+  }
+
+  toDtoWithLexicalUnit(entity: CardEntity) {
+    return {
+      id: entity.id,
+      cardSetId: entity.cardSetId,
+      lexicalUnitId: entity.lexicalUnitId,
+      note: entity.note ?? null,
+      sortOrder: entity.sortOrder,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      lexicalUnit: entity.lexicalUnit ? this.lexicalUnitToDto(entity.lexicalUnit) : null,
     };
   }
 }
