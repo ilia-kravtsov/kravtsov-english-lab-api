@@ -80,6 +80,16 @@ export class LexicalUnitsController {
     return this.service.toDto(found);
   }
 
+  @Get('suggest')
+  async suggest(
+    @CurrentUser('userId') userId: string,
+    @Query('query') query?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (!query || !query.trim()) return [];
+    return this.service.suggestByValue(userId, query, limit);
+  }
+
   @Put(':id')
   @UseInterceptors(
     FileInterceptor('audio', {

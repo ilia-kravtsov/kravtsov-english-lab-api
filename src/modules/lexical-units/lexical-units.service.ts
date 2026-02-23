@@ -28,6 +28,13 @@ function normalizeStoredPath(p: string) {
   return x;
 }
 
+function clampInt(v: unknown, min: number, max: number, fallback: number) {
+  const n = typeof v === 'string' ? Number.parseInt(v, 10) : typeof v === 'number' ? v : NaN;
+  if (!Number.isFinite(n)) return fallback;
+  const x = Math.trunc(n);
+  return Math.min(max, Math.max(min, x));
+}
+
 const UPLOADS_DIR = join(process.cwd(), 'uploads');
 
 async function safeUnlinkAbs(absPath: string) {
@@ -90,6 +97,30 @@ export class LexicalUnitsService {
       .where('lu.userId = :userId', { userId })
       .andWhere('LOWER(lu.value) = LOWER(:v)', { v })
       .getOne();
+  }
+
+  async suggestByValue(userId: string, query: string, limit?: unknown) {
+    const q = normalizeValue(query);
+    if (!q) return [];
+
+    const take = clampInt(limit, 1, 10, 3);
+
+    const items = await this.repo
+      .createQueryBuilder('lu')
+      .select(['lu.id', 'lu.type', 'lu.value', 'lu.translation', 'lu.transcription'])
+      .where('lu.userId = :userId', { userId })
+      .andWhere('lu.value ILIKE :q', { q: `${q}%` })
+      .orderBy('lu.value', 'ASC')
+      .take(take)
+      .getMany();
+
+    return items.map(x => ({
+      id: x.id,
+      type: x.type,
+      value: x.value,
+      translation: x.translation ?? null,
+      transcription: x.transcription ?? null,
+    }));
   }
 
   async update(
