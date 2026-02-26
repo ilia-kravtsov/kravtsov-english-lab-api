@@ -53,8 +53,29 @@ export class CreateLexicalUnitDto {
   partsOfSpeech?: PartsOfSpeech[];
 
   @IsOptional()
-  @IsString()
-  examples?: string;
+  @Transform(({ value }) => {
+    if (value == null || value === '') return undefined;
+
+    const toList = (v: unknown): string[] => {
+      if (Array.isArray(v)) return v.flatMap(toList);
+
+      if (typeof v === 'string') {
+        const x = v.trim();
+        return x ? [x] : [];
+      }
+
+      return [];
+    };
+
+    const list = toList(value)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    return list.length ? list : undefined;
+  })
+  @IsArray()
+  @IsString({ each: true })
+  examples?: string[];
 
   @IsOptional()
   @IsString()
