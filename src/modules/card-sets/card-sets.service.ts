@@ -1,26 +1,20 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CardSetEntity } from './entities/card-set.entity';
+import {CardSetEntity, PresetCardSet} from './entities/card-set.entity';
 import { CreateCardSetDto } from './dto/create-card-set.dto';
 import { UpdateCardSetDto } from './dto/update-card-set.dto';
 import { User } from "../users/entities/user.entity";
 import {randomUUID} from "crypto";
+import {PRESET_CARD_SETS} from "./presets/preset-card-sets";
+import {LexicalUnitEntity} from "../lexical-units/entities/lexical-unit.entity";
+import {CardEntity} from "../cards/entities/card.entity";
+import { promises as fs } from 'fs';
+import { extname, join } from 'path';
 
-type PresetCardSet = {
-  title: string;
-  description?: string | null;
-  sortOrder?: number;
-};
-
-const PRESET_CARD_SETS: PresetCardSet[] = [
-  { title: 'A1', description: "Standard cards set", sortOrder: 0 },
-  { title: 'A2', description: "Standard cards set", sortOrder: 10 },
-  { title: 'B1', description: "Standard cards set", sortOrder: 20 },
-  { title: 'B2', description: "Standard cards set", sortOrder: 30 },
-  { title: 'C1', description: "Standard cards set", sortOrder: 40 },
-  { title: 'C2', description: "Standard cards set", sortOrder: 50 },
-];
+const UPLOADS_DIR = join(process.cwd(), 'uploads');
+const UPLOADS_AUDIO_DIR = join(UPLOADS_DIR, 'lexical-audio');
+const PRESET_AUDIO_ASSETS_DIR = join(UPLOADS_DIR, 'preset-lexical-audio');
 
 function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, ' ');
@@ -52,6 +46,10 @@ export class CardSetsService {
     private readonly repo: Repository<CardSetEntity>,
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
+    @InjectRepository(LexicalUnitEntity)
+    private readonly lexicalRepo: Repository<LexicalUnitEntity>,
+    @InjectRepository(CardEntity)
+    private readonly cardsRepo: Repository<CardEntity>,
   ) {}
 
   private async isTitleTaken(userId: string, title: string, excludeId?: string) {
@@ -65,10 +63,35 @@ export class CardSetsService {
     return (await qb.getCount()) > 0;
   }
 
+  private async ensureUploadsAudioDir(): Promise<void> {
+    await fs.mkdir(UPLOADS_AUDIO_DIR, { recursive: true });
+  }
+
+  private async copyPresetAudioToUploads(assetRelPath: string | null | undefined): Promise<string | null> {
+    if (!assetRelPath) return null;
+
+    await this.ensureUploadsAudioDir();
+
+    const srcAbs = join(PRESET_AUDIO_ASSETS_DIR, assetRelPath);
+    const ext = (extname(assetRelPath) || '.webm').toLowerCase();
+    const fileName = `${randomUUID()}${ext}`;
+    const dstAbs = join(UPLOADS_AUDIO_DIR, fileName);
+
+    try {
+      await fs.copyFile(srcAbs, dstAbs);
+      return `lexical-audio/${fileName}`;
+    } catch {
+      console.log(`Preset audio missing: ${assetRelPath}`);
+      return null;
+    }
+  }
+
   async ensurePresetSetsOnce(userId: string): Promise<void> {
     await this.repo.manager.transaction(async (manager) => {
       const userRepo = manager.getRepository(User);
       const cardSetRepo = manager.getRepository(CardSetEntity);
+      const lexicalRepo = manager.getRepository(LexicalUnitEntity);
+      const cardsRepo = manager.getRepository(CardEntity);
 
       const user = await userRepo.findOne({
         where: { id: userId },
@@ -105,6 +128,40 @@ export class CardSetsService {
 
         try {
           await cardSetRepo.save(entity);
+          for (const pCard of preset.cards) {
+            const audioPath = await this.copyPresetAudioToUploads(pCard.audioAsset);
+            const soundMeaningPath = await this.copyPresetAudioToUploads(pCard.soundMeaningAsset);
+            const soundExamplePath = await this.copyPresetAudioToUploads(pCard.soundExampleAsset);
+            const lexical = lexicalRepo.create({
+              userId,
+              type: pCard.type,
+              value: normalizeText(pCard.value),
+              translation: pCard.translation ?? null,
+              transcription: pCard.transcription ?? null,
+              meaning: pCard.meaning ?? null,
+              imageUrl: pCard.imageUrl ?? null,
+              synonyms: pCard.synonyms ?? null,
+              antonyms: pCard.antonyms ?? null,
+              examples: pCard.examples ?? null,
+              partsOfSpeech: pCard.partsOfSpeech ?? null,
+              comment: pCard.comment ?? null,
+              audioPath: audioPath ?? null,
+              soundMeaningPath: soundMeaningPath ?? null,
+              soundExamplePath: soundExamplePath ?? null,
+            });
+
+            const savedLexical = await lexicalRepo.save(lexical);
+
+            const card = cardsRepo.create({
+              userId,
+              cardSetId: entity.id,
+              lexicalUnitId: savedLexical.id,
+              note: null,
+              sortOrder: 0,
+            });
+
+            await cardsRepo.save(card);
+          }
         } catch (e: any) {
           if (e?.code !== '23505') throw e;
         }
