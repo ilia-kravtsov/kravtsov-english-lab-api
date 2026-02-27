@@ -52,6 +52,26 @@ export class LexicalUnitsService {
     private readonly repo: Repository<LexicalUnitEntity>,
   ) {}
 
+  private async deleteStoredFileIfExists(storedPath: string | null | undefined): Promise<void> {
+    if (!storedPath) return;
+    const rel = normalizeStoredPath(storedPath);
+    const abs = join(UPLOADS_DIR, rel);
+    await safeUnlinkAbs(abs);
+  }
+
+  private async replaceStoredFilePath(
+    entity: LexicalUnitEntity,
+    field: 'audioPath' | 'soundMeaningPath' | 'soundExamplePath',
+    newPath?: string | null,
+  ): Promise<void> {
+    if (!newPath) return;
+
+    const oldPath = entity[field];
+    entity[field] = newPath;
+
+    await this.deleteStoredFileIfExists(oldPath);
+  }
+
   async existsByValue(userId: string, value: string): Promise<boolean> {
     const v = normalizeValue(value);
 
@@ -68,6 +88,8 @@ export class LexicalUnitsService {
     userId: string,
     dto: CreateLexicalUnitDto,
     audioPath?: string | null,
+    soundMeaningPath?: string | null,
+    soundExamplePath?: string | null
   ): Promise<LexicalUnitEntity> {
     const normalized = normalizeValue(dto.value);
 
@@ -82,6 +104,8 @@ export class LexicalUnitsService {
       value: normalized,
       partsOfSpeech: dto.partsOfSpeech ?? null,
       audioPath: audioPath ?? null,
+      soundMeaningPath: soundMeaningPath ?? null,
+      soundExamplePath: soundExamplePath ?? null,
       imageUrl: dto.imageUrl?.trim() || null,
       userId,
     });
@@ -128,6 +152,8 @@ export class LexicalUnitsService {
     id: string,
     dto: CreateLexicalUnitDto,
     newAudioPath?: string | null,
+    newSoundMeaningPath?: string | null,
+    newSoundExamplePath?: string | null
   ): Promise<LexicalUnitEntity> {
     const entity = await this.repo.findOne({ where: { id, userId } });
 
@@ -160,16 +186,9 @@ export class LexicalUnitsService {
     entity.comment = dto.comment ?? null;
     entity.imageUrl = dto.imageUrl?.trim() || null;
 
-    if (newAudioPath) {
-      const old = entity.audioPath;
-      entity.audioPath = newAudioPath;
-
-      if (old) {
-        const rel = normalizeStoredPath(old);
-        const abs = join(UPLOADS_DIR, rel);
-        await safeUnlinkAbs(abs);
-      }
-    }
+    await this.replaceStoredFilePath(entity, 'audioPath', newAudioPath);
+    await this.replaceStoredFilePath(entity, 'soundMeaningPath', newSoundMeaningPath);
+    await this.replaceStoredFilePath(entity, 'soundExamplePath', newSoundExamplePath);
 
     return this.repo.save(entity);
   }
@@ -181,11 +200,9 @@ export class LexicalUnitsService {
       throw new NotFoundException('Lexical unit not found');
     }
 
-    if (entity.audioPath) {
-      const rel = normalizeStoredPath(entity.audioPath);
-      const abs = join(UPLOADS_DIR, rel);
-      await safeUnlinkAbs(abs);
-    }
+    await this.deleteStoredFileIfExists(entity.audioPath);
+    await this.deleteStoredFileIfExists(entity.soundMeaningPath);
+    await this.deleteStoredFileIfExists(entity.soundExamplePath);
 
     await this.repo.remove(entity);
   }
@@ -204,6 +221,8 @@ export class LexicalUnitsService {
       examples: entity.examples ?? null,
       comment: entity.comment ?? null,
       audioUrl: entity.audioPath ? `/uploads/${entity.audioPath}` : null,
+      soundMeaningUrl: entity.soundMeaningPath ? `/uploads/${entity.soundMeaningPath}` : null,
+      soundExampleUrl: entity.soundExamplePath ? `/uploads/${entity.soundExamplePath}` : null,
       imageUrl: entity.imageUrl ?? null,
     };
   }

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,12 +7,12 @@ import {
   Param,
   Post,
   Put,
-  Query, UploadedFile,
-  UploadedFiles,
+  Query,
+  UploadedFile, UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import {FileFieldsInterceptor, FileInterceptor} from '@nestjs/platform-express';
+import {FileFieldsInterceptor} from '@nestjs/platform-express';
 import {diskStorage} from 'multer';
 import {extname, join} from 'path';
 import {CreateLexicalUnitDto} from './dto/create-lexical-unit.dto';
@@ -21,7 +20,7 @@ import {LexicalUnitsService} from './lexical-units.service';
 import {randomUUID} from 'crypto';
 import {JwtAuthGuard} from "../../common/guards/jwt-auth.guard";
 import {CurrentUser} from "../../common/decorators/current-user.decorator";
-import { promises as fs } from 'fs';
+import {promises as fs} from 'fs';
 
 function safeExt(originalName: string, fallback: string) {
   const e = extname(originalName || '').toLowerCase();
@@ -44,25 +43,44 @@ export class LexicalUnitsController {
 
   @Post()
   @UseInterceptors(
-    FileInterceptor('audio', {
-      storage: diskStorage({
-        destination: UPLOADS_AUDIO_DIR,
-        filename: (_req, file, cb) => {
-          const ext = safeExt(file.originalname, '.webm');
-          cb(null, `${randomUUID()}${ext}`);
-        },
-      }),
-      limits: { fileSize: 15 * 1024 * 1024 },
-    }),
+    FileFieldsInterceptor(
+      [
+        { name: 'audio', maxCount: 1 },
+        { name: 'soundMeaning', maxCount: 1 },
+        { name: 'soundExample', maxCount: 1 },
+      ],
+      {
+        storage: diskStorage({
+          destination: UPLOADS_AUDIO_DIR,
+          filename: (_req, file, cb) => {
+            const ext = safeExt(file.originalname, '.webm');
+            cb(null, `${randomUUID()}${ext}`);
+          },
+        }),
+        limits: { fileSize: 15 * 1024 * 1024 },
+      },
+    ),
   )
 
   async create(
     @CurrentUser('userId') userId: string,
     @Body() dto: CreateLexicalUnitDto,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles()
+    files?: {
+      audio?: Express.Multer.File[];
+      soundMeaning?: Express.Multer.File[];
+      soundExample?: Express.Multer.File[];
+    },
   ) {
-    const audioPath = file ? `lexical-audio/${file.filename}` : null;
-    const created = await this.service.create(userId, dto, audioPath);
+    const audioFile = files?.audio?.[0];
+    const meaningFile = files?.soundMeaning?.[0];
+    const exampleFile = files?.soundExample?.[0];
+
+    const audioPath = audioFile ? `lexical-audio/${audioFile.filename}` : null;
+    const soundMeaningPath = meaningFile ? `lexical-audio/${meaningFile.filename}` : null;
+    const soundExamplePath = exampleFile ? `lexical-audio/${exampleFile.filename}` : null;
+
+    const created = await this.service.create(userId, dto, audioPath, soundMeaningPath, soundExamplePath);
     return this.service.toDto(created);
   }
 
@@ -92,26 +110,45 @@ export class LexicalUnitsController {
 
   @Put(':id')
   @UseInterceptors(
-    FileInterceptor('audio', {
-      storage: diskStorage({
-        destination: UPLOADS_AUDIO_DIR,
-        filename: (_req, file, cb) => {
-          const ext = safeExt(file.originalname, '.webm');
-          cb(null, `${randomUUID()}${ext}`);
-        },
-      }),
-      limits: { fileSize: 15 * 1024 * 1024 },
-    }),
+    FileFieldsInterceptor(
+      [
+        { name: 'audio', maxCount: 1 },
+        { name: 'soundMeaning', maxCount: 1 },
+        { name: 'soundExample', maxCount: 1 },
+      ],
+      {
+        storage: diskStorage({
+          destination: UPLOADS_AUDIO_DIR,
+          filename: (_req, file, cb) => {
+            const ext = safeExt(file.originalname, '.webm');
+            cb(null, `${randomUUID()}${ext}`);
+          },
+        }),
+        limits: { fileSize: 15 * 1024 * 1024 },
+      },
+    ),
   )
 
   async update(
     @CurrentUser('userId') userId: string,
     @Param('id') id: string,
     @Body() dto: CreateLexicalUnitDto,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles()
+    files?: {
+      audio?: Express.Multer.File[];
+      soundMeaning?: Express.Multer.File[];
+      soundExample?: Express.Multer.File[];
+    },
   ) {
-    const audioPath = file ? `lexical-audio/${file.filename}` : null;
-    const updated = await this.service.update(userId, id, dto, audioPath);
+    const audioFile = files?.audio?.[0];
+    const meaningFile = files?.soundMeaning?.[0];
+    const exampleFile = files?.soundExample?.[0];
+
+    const audioPath = audioFile ? `lexical-audio/${audioFile.filename}` : null;
+    const soundMeaningPath = meaningFile ? `lexical-audio/${meaningFile.filename}` : null;
+    const soundExamplePath = exampleFile ? `lexical-audio/${exampleFile.filename}` : null;
+
+    const updated = await this.service.update(userId, id, dto, audioPath, soundMeaningPath, soundExamplePath);
     return this.service.toDto(updated);
   }
 
