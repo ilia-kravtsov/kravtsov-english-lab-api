@@ -47,11 +47,11 @@ export class LexicalUnitEntity {
   @Column({ type: 'text', nullable: true })
   meaning?: string | null;
 
-  @Column({ type: 'text', nullable: true })
-  antonyms?: string | null;
+  @Column({ type: 'text', array: true, nullable: true })
+  antonyms?: string[] | null;
 
-  @Column({ type: 'text', nullable: true })
-  synonyms?: string | null;
+  @Column({ type: 'text', array: true, nullable: true })
+  synonyms?: string[] | null;
 
   @Column({ type: 'text', array: true, nullable: true })
   partsOfSpeech: PartsOfSpeech[] | null;

@@ -23,12 +23,38 @@ export class CreateLexicalUnitDto {
   meaning?: string;
 
   @IsOptional()
-  @IsString()
-  antonyms?: string;
+  @Transform(({ value }) => {
+    if (value == null || value === '') return undefined;
+
+    const toList = (v: unknown): string[] => {
+      if (Array.isArray(v)) return v.flatMap(toList);
+      if (typeof v === 'string') return v.split(',').map(s => s.trim()).filter(Boolean);
+      return [];
+    };
+
+    const list = toList(value).map(s => s.trim()).filter(Boolean);
+    return list.length ? list : undefined;
+  })
+  @IsArray()
+  @IsString({ each: true })
+  antonyms?: string[];
 
   @IsOptional()
-  @IsString()
-  synonyms?: string;
+  @Transform(({ value }) => {
+    if (value == null || value === '') return undefined;
+
+    const toList = (v: unknown): string[] => {
+      if (Array.isArray(v)) return v.flatMap(toList);
+      if (typeof v === 'string') return v.split(',').map(s => s.trim()).filter(Boolean);
+      return [];
+    };
+
+    const list = toList(value).map(s => s.trim()).filter(Boolean);
+    return list.length ? list : undefined;
+  })
+  @IsArray()
+  @IsString({ each: true })
+  synonyms?: string[];
 
   @IsOptional()
   @Transform(({ value }) => {
