@@ -294,6 +294,20 @@ export class CardSetsService {
     });
   }
 
+  async listWithCounts(userId: string) {
+    await this.ensurePresetSetsOnce(userId);
+
+    const sets = await this.repo
+      .createQueryBuilder('cs')
+      .where('cs.userId = :userId', { userId })
+      .loadRelationCountAndMap('cs.cardsCount', 'cs.cards')
+      .orderBy('cs.sortOrder', 'ASC')
+      .addOrderBy('cs.createdAt', 'ASC')
+      .getMany();
+
+    return sets.map(s => this.toDto(s));
+  }
+
   async getById(userId: string, id: string): Promise<CardSetEntity> {
     const entity = await this.repo.findOne({ where: { id, userId } });
 
@@ -367,6 +381,7 @@ export class CardSetsService {
       sortOrder: entity.sortOrder,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
+      cardsCount: entity.cardsCount ?? 0,
     };
   }
 }

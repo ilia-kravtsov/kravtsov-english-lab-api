@@ -27,7 +27,7 @@ export type PresetCardSet = {
 export const PRESET_CARD_SETS: PresetCardSet[] = [
   {
     title: 'A1',
-    description: 'Standard cards set',
+    description: 'Beginner',
     sortOrder: 0,
     cards: [
       {
@@ -1663,7 +1663,7 @@ export const PRESET_CARD_SETS: PresetCardSet[] = [
   },
   {
     title: 'A2',
-    description: 'Standard cards set',
+    description: 'Elementary',
     sortOrder: 1,
     cards: [
       {
@@ -2244,7 +2244,7 @@ export const PRESET_CARD_SETS: PresetCardSet[] = [
   },
   {
     title: 'B1',
-    description: 'Standard cards set',
+    description: 'Intermediate',
     sortOrder: 2,
     cards: [
       {
@@ -7129,7 +7129,7 @@ export const PRESET_CARD_SETS: PresetCardSet[] = [
   },
   {
     title: 'B2',
-    description: 'Upper-intermediate cards set',
+    description: 'Upper-intermediate',
     sortOrder: 3,
     cards: [
       {
@@ -7746,7 +7746,7 @@ export const PRESET_CARD_SETS: PresetCardSet[] = [
   },
   {
     title: 'C1',
-    description: 'Advanced cards set',
+    description: 'Advanced',
     sortOrder: 4,
     cards: [
       {
@@ -8362,7 +8362,7 @@ export const PRESET_CARD_SETS: PresetCardSet[] = [
   },
   {
     title: 'C2',
-    description: 'Proficiency cards set',
+    description: 'Proficiency',
     sortOrder: 5,
     cards: [
       {

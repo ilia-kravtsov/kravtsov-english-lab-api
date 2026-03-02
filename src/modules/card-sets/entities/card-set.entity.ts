@@ -4,11 +4,12 @@ import {
   Entity,
   Index,
   JoinColumn,
-  ManyToOne,
+  ManyToOne, OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import {CardEntity} from "../../cards/entities/card.entity";
 
 @Entity('card_sets')
 @Index(['userId'])
@@ -47,6 +48,11 @@ export class CardSetEntity {
 
   @Column({ type: 'text', nullable: true })
   presetKey: string | null;
+
+  @OneToMany(() => CardEntity, card => card.cardSet)
+  cards: CardEntity[];
+
+  cardsCount?: number;
 }
 
 export type PartsOfSpeech =

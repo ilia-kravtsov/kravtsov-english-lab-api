@@ -26,8 +26,16 @@ export class CardSetsController {
     return sets.map((x) => this.service.toDto(x));
   }
 
+  @Get('with-counts')
+  async listWithCounts(@CurrentUser('userId') userId: string) {
+    return this.service.listWithCounts(userId);
+  }
+
   @Get(':id')
-  async get(@CurrentUser('userId') userId: string, @Param('id') id: string) {
+  async getOne(
+    @CurrentUser('userId') userId: string,
+    @Param('id') id: string,
+  ) {
     const set = await this.service.getById(userId, id);
     return this.service.toDto(set);
   }
@@ -52,14 +60,5 @@ export class CardSetsController {
   @HttpCode(204)
   async remove(@CurrentUser('userId') userId: string, @Param('id') id: string) {
     await this.service.remove(userId, id);
-  }
-
-  @Get(':id')
-  async getOne(
-    @CurrentUser('userId') userId: string,
-    @Param('id') id: string,
-  ) {
-    const set = await this.service.getById(userId, id);
-    return this.service.toDto(set);
   }
 }
