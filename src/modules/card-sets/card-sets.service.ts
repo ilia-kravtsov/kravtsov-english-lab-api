@@ -20,6 +20,11 @@ function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, ' ');
 }
 
+function setIfNull<T>(current: T | null | undefined, next: T | null | undefined): T | null {
+  if (current !== null && current !== undefined) return current as any;
+  return (next ?? null) as any;
+}
+
 function slugify(input: string) {
   const x = normalizeText(input).toLowerCase();
   const slug = x
@@ -129,33 +134,141 @@ export class CardSetsService {
         try {
           await cardSetRepo.save(entity);
           for (const pCard of preset.cards) {
-            const audioPath = await this.copyPresetAudioToUploads(pCard.audioAsset);
-            const soundMeaningPath = await this.copyPresetAudioToUploads(pCard.soundMeaningAsset);
-            const soundExamplePath = await this.copyPresetAudioToUploads(pCard.soundExampleAsset);
-            const lexical = lexicalRepo.create({
-              userId,
-              type: pCard.type,
-              value: normalizeText(pCard.value),
-              translation: pCard.translation ?? null,
-              transcription: pCard.transcription ?? null,
-              meaning: pCard.meaning ?? null,
-              imageUrl: pCard.imageUrl ?? null,
-              synonyms: pCard.synonyms ?? null,
-              antonyms: pCard.antonyms ?? null,
-              examples: pCard.examples ?? null,
-              partsOfSpeech: pCard.partsOfSpeech ?? null,
-              comment: pCard.comment ?? null,
-              audioPath: audioPath ?? null,
-              soundMeaningPath: soundMeaningPath ?? null,
-              soundExamplePath: soundExamplePath ?? null,
-            });
+            const value = normalizeText(pCard.value);
 
-            const savedLexical = await lexicalRepo.save(lexical);
+            let existing = await lexicalRepo
+              .createQueryBuilder('lu')
+              .where('lu.userId = :userId', { userId })
+              .andWhere('LOWER(lu.value) = LOWER(:v)', { v: value })
+              .getOne();
+
+            const audioPath = (!existing || !existing.audioPath)
+              ? await this.copyPresetAudioToUploads(pCard.audioAsset)
+              : null;
+            const soundMeaningPath = (!existing || !existing.soundMeaningPath)
+              ? await this.copyPresetAudioToUploads(pCard.soundMeaningAsset)
+              : null;
+            const soundExamplePath = (!existing || !existing.soundExamplePath)
+              ? await this.copyPresetAudioToUploads(pCard.soundExampleAsset)
+              : null;
+
+            if (existing) {
+              const nextTranslation = pCard.translation ?? null;
+              const nextTranscription = pCard.transcription ?? null;
+              const nextMeaning = pCard.meaning ?? null;
+              const nextImageUrl = pCard.imageUrl ?? null;
+              const nextSynonyms = pCard.synonyms ?? null;
+              const nextAntonyms = pCard.antonyms ?? null;
+              const nextExamples = pCard.examples ?? null;
+              const nextParts = pCard.partsOfSpeech ?? null;
+              const nextComment = pCard.comment ?? null;
+
+              const prevSnapshot = {
+                translation: existing.translation,
+                transcription: existing.transcription,
+                meaning: existing.meaning,
+                imageUrl: existing.imageUrl,
+                synonyms: existing.synonyms,
+                antonyms: existing.antonyms,
+                examples: existing.examples,
+                partsOfSpeech: existing.partsOfSpeech,
+                comment: existing.comment,
+                audioPath: existing.audioPath,
+                soundMeaningPath: existing.soundMeaningPath,
+                soundExamplePath: existing.soundExamplePath,
+              };
+
+              existing.translation = setIfNull(existing.translation, nextTranslation);
+              existing.transcription = setIfNull(existing.transcription, nextTranscription);
+              existing.meaning = setIfNull(existing.meaning, nextMeaning);
+              existing.imageUrl = setIfNull(existing.imageUrl, nextImageUrl);
+              existing.synonyms = setIfNull(existing.synonyms, nextSynonyms);
+              existing.antonyms = setIfNull(existing.antonyms, nextAntonyms);
+              existing.examples = setIfNull(existing.examples, nextExamples);
+              existing.partsOfSpeech = setIfNull(existing.partsOfSpeech, nextParts);
+              existing.comment = setIfNull(existing.comment, nextComment);
+
+              existing.audioPath = setIfNull(existing.audioPath, audioPath ?? null);
+              existing.soundMeaningPath = setIfNull(existing.soundMeaningPath, soundMeaningPath ?? null);
+              existing.soundExamplePath = setIfNull(existing.soundExamplePath, soundExamplePath ?? null);
+
+              const changed =
+                existing.translation !== prevSnapshot.translation ||
+                existing.transcription !== prevSnapshot.transcription ||
+                existing.meaning !== prevSnapshot.meaning ||
+                existing.imageUrl !== prevSnapshot.imageUrl ||
+                existing.comment !== prevSnapshot.comment ||
+                existing.audioPath !== prevSnapshot.audioPath ||
+                existing.soundMeaningPath !== prevSnapshot.soundMeaningPath ||
+                existing.soundExamplePath !== prevSnapshot.soundExamplePath ||
+                JSON.stringify(existing.synonyms) !== JSON.stringify(prevSnapshot.synonyms) ||
+                JSON.stringify(existing.antonyms) !== JSON.stringify(prevSnapshot.antonyms) ||
+                JSON.stringify(existing.examples) !== JSON.stringify(prevSnapshot.examples) ||
+                JSON.stringify(existing.partsOfSpeech) !== JSON.stringify(prevSnapshot.partsOfSpeech);
+
+              if (changed) {
+                await lexicalRepo.save(existing);
+              }
+            }
+
+            let lexicalId: string;
+
+            if (existing) {
+              lexicalId = existing.id;
+            } else {
+              const lexical = lexicalRepo.create({
+                userId,
+                type: pCard.type,
+                value,
+                translation: pCard.translation ?? null,
+                transcription: pCard.transcription ?? null,
+                meaning: pCard.meaning ?? null,
+                imageUrl: pCard.imageUrl ?? null,
+                synonyms: pCard.synonyms ?? null,
+                antonyms: pCard.antonyms ?? null,
+                examples: pCard.examples ?? null,
+                partsOfSpeech: pCard.partsOfSpeech ?? null,
+                comment: pCard.comment ?? null,
+                audioPath: audioPath ?? null,
+                soundMeaningPath: soundMeaningPath ?? null,
+                soundExamplePath: soundExamplePath ?? null,
+              });
+
+              try {
+                const savedLexical = await lexicalRepo.save(lexical);
+                lexicalId = savedLexical.id;
+              } catch (e: any) {
+                if (e?.code !== '23505') {
+                  throw e;
+                }
+
+                const retry = await lexicalRepo
+                  .createQueryBuilder('lu')
+                  .where('lu.userId = :userId', { userId })
+                  .andWhere('LOWER(lu.value) = LOWER(:v)', { v: value })
+                  .getOne();
+
+                if (!retry) {
+                  throw e;
+                }
+
+                lexicalId = retry.id;
+              }
+            }
+
+            const cardExists = await cardsRepo
+              .createQueryBuilder('c')
+              .where('c.userId = :userId', { userId })
+              .andWhere('c.cardSetId = :cardSetId', { cardSetId: entity.id })
+              .andWhere('c.lexicalUnitId = :lexicalUnitId', { lexicalUnitId: lexicalId })
+              .getCount();
+
+            if (cardExists > 0) continue;
 
             const card = cardsRepo.create({
               userId,
               cardSetId: entity.id,
-              lexicalUnitId: savedLexical.id,
+              lexicalUnitId: lexicalId,
               note: null,
               sortOrder: 0,
             });
