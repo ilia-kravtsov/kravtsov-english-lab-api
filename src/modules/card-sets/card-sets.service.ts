@@ -11,6 +11,9 @@ import {LexicalUnitEntity} from "../lexical-units/entities/lexical-unit.entity";
 import {CardEntity} from "../cards/entities/card.entity";
 import { promises as fs } from 'fs';
 import { extname, join } from 'path';
+import {
+  buildExpressionsPresetAudioAssets,
+} from "../lexical-units/utils/preset-audio-path.util";
 
 const UPLOADS_DIR = join(process.cwd(), 'uploads');
 const UPLOADS_AUDIO_DIR = join(UPLOADS_DIR, 'lexical-audio');
@@ -141,6 +144,14 @@ export class CardSetsService {
               .where('lu.userId = :userId', { userId })
               .andWhere('LOWER(lu.value) = LOWER(:v)', { v: value })
               .getOne();
+
+            if (preset.title === 'Expressions') {
+              const a = buildExpressionsPresetAudioAssets(pCard.value);
+
+              pCard.audioAsset = pCard.audioAsset ?? a.audioAsset;
+              pCard.soundMeaningAsset = pCard.soundMeaningAsset ?? a.soundMeaningAsset;
+              pCard.soundExampleAsset = pCard.soundExampleAsset ?? a.soundExampleAsset;
+            }
 
             const audioPath = (!existing || !existing.audioPath)
               ? await this.copyPresetAudioToUploads(pCard.audioAsset)
