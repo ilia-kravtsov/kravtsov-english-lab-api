@@ -301,7 +301,7 @@ export class CardSetsService {
 
     return this.repo.find({
       where: { userId },
-      order: { sortOrder: 'ASC', createdAt: 'ASC' },
+      order: { sortOrder: 'ASC', createdAt: 'DESC' },
     });
   }
 
@@ -313,7 +313,7 @@ export class CardSetsService {
       .where('cs.userId = :userId', { userId })
       .loadRelationCountAndMap('cs.cardsCount', 'cs.cards')
       .orderBy('cs.sortOrder', 'ASC')
-      .addOrderBy('cs.createdAt', 'ASC')
+      .addOrderBy('cs.createdAt', 'DESC')
       .getMany();
 
     return sets.map(s => this.toDto(s));
