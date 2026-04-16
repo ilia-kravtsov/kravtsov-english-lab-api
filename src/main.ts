@@ -14,9 +14,11 @@ async function bootstrap() {
       'http://localhost:5174',
       'https://kravtsov-english-lab.ru',
       'https://kravtsov-english-lab.online',
-      'https://api.kravtsov-english-lab.online',
     ],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Set-Cookie', 'X-Requested-With'],
     credentials: true,
+    optionsSuccessStatus: 200,
   });
 
   app.use(cookieParser());
